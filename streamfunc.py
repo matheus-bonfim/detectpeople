@@ -12,7 +12,7 @@ def watchStream(videoCh, ret, frame):
         cv2.putText(frame,f'Sairam: {videoCh.countBA if videoCh.direction else videoCh.countAB}', (700, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
 
         cv2.rectangle(frame, (0, 130), (1280, 720), (0, 255, 0), 2)
-
+#(130, 720, 0, 720)
         cv2.imshow("Contagem de Pessoas na Linha", frame)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):

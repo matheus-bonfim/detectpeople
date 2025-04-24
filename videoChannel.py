@@ -33,7 +33,6 @@ class VideoChannel:
     def analyse(self):
         self.ret, self.frame = self.readVideo()
         if self.ret:
-            
             if self.roi:
                 frameROI = self.frame[self.ry1:self.ry2, self.rx1:self.rx2]
             else:

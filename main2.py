@@ -1,12 +1,13 @@
 from multiprocessing import Process, Event, Queue
 import time
+import logging
 from ultralytics import YOLO
 from mathfunc import line_func, dist_line_signed
 from videoChannel import VideoChannel
+import urllib.parse
 from streamfunc import watchStream
+import cv2  
 import threading
-from datab import update_db
-import asyncio
 
 #model = YOLO("yolov8n.pt") 
 run = True
@@ -23,19 +24,16 @@ cam1 = {
     'url':'192.168.24.37:554/media/video2',
     'psw':psw1,
     'p1': (0, 500),
-    'p2': (1280, 500),
-
-    
+    'p2': (1280, 500)
 }
 
-#'roi': (130, 720, 0, 720)
+
 cam2 = {
     'name': 'ch2',
     'url': '172.16.0.180/media/video1',
     'psw': psw2,
-    'p1': (0, 500),
-    'p2': (1280, 140),
-
+    'p1': (0, 420),
+    'p2': (1037, 0)
 }
 
 cam3 = {
@@ -43,8 +41,7 @@ cam3 = {
     'url': '192.168.24.29:554',
     'psw': psw1,
     'p1': (0, 300),
-    'p2': (1280, 400),
-
+    'p2': (1280, 400)
 }
 
 
@@ -53,12 +50,11 @@ cam4 = {
     'url': '172.16.0.181/media/video1',
     'psw': psw2,
     'p1': (0, 450),
-    'p2': (1280, 450),
-
+    'p2': (1280, 450)
 }
 
 
-streams_lst = [cam1, cam2, cam4]
+streams_lst = [cam4, cam1]
 
 channels = {}
 channels_ret_frame = {}
@@ -91,10 +87,17 @@ def console():
         else:
             print(f"[Erro] Comando desconhecido: {comm}")
 
-# Inicia a thread de escutprint(self.countAB)a
+
+def func(ch):
+    while True:
+        ch.analyse()
+# Inicia a thread de escuta
 thread_console = threading.Thread(target=console)
 thread_console.daemon = True
 thread_console.start()
+
+thread_cam1 = threading.Thread(target=func, args=(channels['ch1'],))
+thread_cam1.start()
 
 
 last_time = time.time()
@@ -102,22 +105,12 @@ last_time2 = time.time()
 
 while run:
 
-    for key in channels:
-        
-        channel = channels[key]
-        ret, frame = channel.analyse()
-        channels_ret_frame[key] = {'ret':ret, 'frame':frame}
-        if time.time() - last_time > 2:
-            last_time = time.time()
-            asyncio.run(update_db(channel, key))
-            #ab ba ponto
-
-
+            
         
     #print(channels_ret_frame)
     if showVideo:
         if selectedChannel:
-            if time.time() - last_time2 > 0.03:
+            if time.time() - last_time > 0.03:
                 last_time2 = time.time()
                 ch = channels[selectedChannel]
                 showVideo = watchStream(ch, channels_ret_frame[selectedChannel]['ret'], channels_ret_frame[selectedChannel]['frame'])
