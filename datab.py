@@ -1,6 +1,11 @@
 import asyncio
 import aiomysql
+from videoChannel import VideoChannel
+from config import channels
+import ast
 
+streams_lst = []
+channels = {}
 async def connectToDB():
     try:
         conn = await aiomysql.connect(
@@ -31,6 +36,7 @@ async def query_db(query, values, commit=False):
                     await conn.commit()
                 res = await cur.fetchall()
                 print(res)
+                return res
             except aiomysql.MySQLError as err:
                 print("Erro na query: ", err)
             finally:
@@ -44,9 +50,40 @@ async def insert_db(values):
     query = "INSERT INTO countTable (ponto, ab, ba) values(%s, %s, %s)"
     await query_db(query, values, True)
 
-async def update_db2(values):
-    query = "UPDATE countTable SET ab = %s, ba = %s where ponto = %s"
-    await query_db(query, values, True)
+async def check_cams():
+    query = "SELECT state, ponto, ip, p1, p2  FROM countTable WHERE state in (1, 2, 3)"
+    cam_lst = await query_db(query, [])
+    
+    for cam in cam_lst:
+        state, ponto, ip, p1, p2 = cam
+        if state == 1:
+    # eval(str) -> tupla //f'{ip}/media/video1'
+            
+            channels[ponto] = VideoChannel(ip, 'Wnidobrasil#22', p1, p2)
+            query = "UPDATE countTable SET state = 0 WHERE ponto = %s"
+            await query_db(query, [ponto], True)
+        elif state == 2:
+        
+            channels.pop(ponto, None)
+
+            query = "UPDATE countTable SET state = 4 WHERE ponto = %s"
+            await query_db(query, [ponto], True)
+
+        elif state == 3:
+            channels.pop(ponto, None)
+            print(channels)            
+    return None
+
+async def start_cams(channels):
+    query = "SELECT state, ponto, ip, p1, p2  FROM countTable WHERE state = 0"
+    cam_lst = await query_db(query, [])
+    for cam in cam_lst:
+        state, ponto, ip, p1, p2 = cam
+        channels[ponto] = VideoChannel(f'{ip}/media/video1', 'Wnidobrasil#22', p1, p2)
+
+
+
+#asyncio.run(check_cams())
 
 async def update_db(ch, chName):
     queries = [
@@ -87,6 +124,8 @@ async def update_db(ch, chName):
                 print("conexion closed")
     else:
         print("unable to connect to db")
+
+    return None
 
 #asyncio.run(update_db2('ch1'))
 

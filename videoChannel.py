@@ -3,6 +3,7 @@ import cv2
 import urllib.parse
 from ultralytics import YOLO
 import torch
+import ast
 
 class VideoChannel:
     #video = {name:name, URL: url}
@@ -13,10 +14,13 @@ class VideoChannel:
         self.model.to(device)  # Garante que está na GPU
 
         psw = urllib.parse.quote(psw)
+        self.p_line1 = ast.literal_eval(p_line1)
+        self.p_line2 = ast.literal_eval(p_line2)
+        print(self.p_line1)
+        print(self.p_line2)
         self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{url}', cv2.CAP_FFMPEG)
-        self.al, self.bl = line_func(p_line1[0], p_line1[1], p_line2[0], p_line2[1])
-        self.p_line1 = p_line1
-        self.p_line2 = p_line2
+        self.al, self.bl = line_func(self.p_line1[0], self.p_line1[1], self.p_line2[0], self.p_line2[1])
+
         self.roi = roi
         if self.roi:
             self.ry1, self.ry2, self.rx1, self.rx2 = self.roi

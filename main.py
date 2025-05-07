@@ -5,7 +5,7 @@ from mathfunc import line_func, dist_line_signed
 from videoChannel import VideoChannel
 from streamfunc import watchStream
 import threading
-from datab import update_db
+#from datab import update_db
 import asyncio
 
 #model = YOLO("yolov8n.pt") 
@@ -109,7 +109,7 @@ while run:
         channels_ret_frame[key] = {'ret':ret, 'frame':frame}
         if time.time() - last_time > 2:
             last_time = time.time()
-            asyncio.run(update_db(channel, key))
+            #asyncio.run(update_db(channel, key))
             #ab ba ponto
 
 
