@@ -5,10 +5,24 @@ from ultralytics import YOLO
 import torch
 import ast
 
+
+
+def killAllVideoChannels(channels):
+    for key in list(channels.keys()):
+        channels[key].videoStream.release()
+        del channels[key] 
+
+def killVideoChannel(ponto, channels):
+    print(f"Encerrando {ponto}")
+    channels[ponto].videoStream.release()
+    del channels[ponto]
+
+
 class VideoChannel:
     #video = {name:name, URL: url}
-    def __init__(self, url, psw, p_line1, p_line2, direction=True, roi=None, offset=20): # roi = (y1,y2,x1,x2)
-        
+    def __init__(self, ponto, ip, psw, p_line1, p_line2, countAB, countBA, direction=True, roi=None, offset=20): # roi = (y1,y2,x1,x2)
+        self.ponto = ponto
+        self.url = f'{ip}/media/video1'
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = YOLO("yolov8n.pt")  # ou yolov8n.pt, yolov8m.pt...
         self.model.to(device)  # Garante que está na GPU
@@ -18,7 +32,10 @@ class VideoChannel:
         self.p_line2 = ast.literal_eval(p_line2)
         print(self.p_line1)
         print(self.p_line2)
-        self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{url}', cv2.CAP_FFMPEG)
+        self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{self.url}', cv2.CAP_FFMPEG)
+        width = self.videoStream.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = self.videoStream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        #1920/1080p
         self.al, self.bl = line_func(self.p_line1[0], self.p_line1[1], self.p_line2[0], self.p_line2[1])
 
         self.roi = roi
@@ -27,8 +44,8 @@ class VideoChannel:
         self.offset = offset
         self.sideA_ids = set()
         self.sideB_ids = set()
-        self.countAB = 0
-        self.countBA = 0 
+        self.countAB = countAB
+        self.countBA = countBA 
         self.direction = direction
 
     def readVideo(self):
@@ -54,8 +71,9 @@ class VideoChannel:
                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # centro do bounding box
                     if(self.roi):
                         cy += self.ry1
-
+                    
                     d = dist_line_signed(cx, cy, self.al, self.bl)
+                    print("a distancia é: ",d)
                     if(d < -self.offset): #ta do lado B
                         if int(track_id) not in self.sideB_ids:
                             # tenta remover do lado A

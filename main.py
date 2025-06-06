@@ -1,123 +1,82 @@
 from multiprocessing import Process, Event, Queue
+from queue import Empty
 import time
 from ultralytics import YOLO
 from mathfunc import line_func, dist_line_signed
 from videoChannel import VideoChannel
 from streamfunc import watchStream
 import threading
-#from datab import update_db
 import asyncio
+from datab import get_ready_streams, update_channel_db
+from process import create_channel_process
+from config import processes, stop_events, state, new_processes
+from api import app
 
-#model = YOLO("yolov8n.pt") 
-run = True
-showVideo = False
-selectedChannel = None
-#psw = urllib.parse.quote("Wnidobrasil#22")
-#video1 = cv2.VideoCapture(f'rtsp://admin:{psw}@192.168.24.37:554/media/video2')
+psw = 'Wnidobrasil#22'
 
-psw1 = "Wnidobrasil#22"
-psw2 = "admin"
+async def update_data(data_queue):
+    while True:
+        try:
+            data = data_queue.get_nowait()
+            await update_channel_db(data["ponto"], data["ab"], data["ba"])
 
-cam1 = {
-    'name': 'ch1', 
-    'url':'192.168.24.37:554/media/video2',
-    'psw':psw1,
-    'p1': (0, 500),
-    'p2': (1280, 500),
+        except Empty: #se nao tem nada na fila da exception
+            break
 
+async def check_and_create_process(new_processes, processes, stop_events, data_queue):
+    try:
+        new_processes.get_nowait()
+        ch_list = await get_ready_streams(firstTime=False)
+        for ch_info in ch_list:
+            stop = Event()
+            p = Process(target=create_channel_process, args=(ch_info, psw, stop, data_queue))
+            p.start()
+            processes[ch_info[0]] = p
+            stop_events[ch_info[0]] = stop
+            
+    except Empty:
+        return
+
+async def main():
+    def run_flask():
+        app.run(port=5500, debug=False, use_reloader=False)
+
+    thread_flask = threading.Thread(target=run_flask)
+    thread_flask.start()
+
+    ch_list = await get_ready_streams()
+
+
+    data_queue = Queue()
+
+    #def create_process():
+
+
+    for ch_info in ch_list:
+        stop = Event()
+        p = Process(target=create_channel_process, args=(ch_info, psw, stop, data_queue))
+        processes[ch_info[0]] = p
+        stop_events[ch_info[0]] = stop
+        p.start()
+
+    #time.sleep(10)
     
-}
+    #atualiza dados no banco
+    last_time = time.time()
+    last_time_end = time.time()
 
-#'roi': (130, 720, 0, 720)
-cam2 = {
-    'name': 'ch2',
-    'url': '172.16.0.180/media/video1',
-    'psw': psw2,
-    'p1': (0, 500),
-    'p2': (1280, 140),
-
-}
-
-cam3 = {
-    'name': 'ch3',
-    'url': '192.168.24.29:554',
-    'psw': psw1,
-    'p1': (0, 300),
-    'p2': (1280, 400),
-
-}
+    while state['run']:
 
 
-cam4 = {
-    'name': 'ch4',
-    'url': '172.16.0.181/media/video1',
-    'psw': psw2,
-    'p1': (0, 450),
-    'p2': (1280, 450),
-
-}
-
-
-streams_lst = [cam1, cam2, cam4]
-
-channels = {}
-channels_ret_frame = {}
-#stream = {'ch1':objVideoChannel}
-
-for stream in streams_lst:
-    
-    channels[stream['name']] = VideoChannel(stream['url'], stream['psw'], stream['p1'], stream['p2'])
-
-def console():
-    global showVideo, channels, run, selectedChannel
-    while run:
-        entrada = input().strip().lower().split()
-        if not entrada:
-            continue  # ignora entradas vazias
-        
-        comm = entrada[0]
-        arg = entrada[1] if len(entrada) > 1 else None
-
-        if comm == "w":
-            if arg and arg in channels:
-                selectedChannel = arg
-                showVideo = True
-            else:
-                print("Canal não encontrado ou argumento ausente")
-                
-        elif comm == "q":
-            run = False
-
-        else:
-            print(f"[Erro] Comando desconhecido: {comm}")
-
-# Inicia a thread de escutprint(self.countAB)a
-thread_console = threading.Thread(target=console)
-thread_console.daemon = True
-thread_console.start()
+        if( time.time() - last_time > 1):
+            last_time = time.time() # bom criar threads para update_data
+            await update_data(data_queue)
+            await check_and_create_process(new_processes, processes, stop_events, data_queue)
+            
+    for key in list(processes.keys()):
+        stop_events[key].set()
+        processes[key].join()
 
 
-last_time = time.time()
-last_time2 = time.time()
-
-while run:
-
-    for key in channels:
-        
-        channel = channels[key]
-        ret, frame = channel.analyse()
-        channels_ret_frame[key] = {'ret':ret, 'frame':frame}
-        if time.time() - last_time > 2:
-            last_time = time.time()
-            #asyncio.run(update_db(channel, key))
-            #ab ba ponto
-
-
-        
-    #print(channels_ret_frame)
-    if showVideo:
-        if selectedChannel:
-            if time.time() - last_time2 > 0.03:
-                last_time2 = time.time()
-                ch = channels[selectedChannel]
-                showVideo = watchStream(ch, channels_ret_frame[selectedChannel]['ret'], channels_ret_frame[selectedChannel]['frame'])
+if __name__ == "__main__":
+    asyncio.run(main())

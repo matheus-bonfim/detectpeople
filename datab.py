@@ -1,7 +1,6 @@
 import asyncio
 import aiomysql
 from videoChannel import VideoChannel
-from config import channels
 import ast
 
 streams_lst = []
@@ -35,102 +34,43 @@ async def query_db(query, values, commit=False):
                 if commit:
                     await conn.commit()
                 res = await cur.fetchall()
-                print(res)
+                conn.close()
                 return res
             except aiomysql.MySQLError as err:
                 print("Erro na query: ", err)
-            finally:
-
-                conn.close()
-                print("conexion closed")
     else:
         print("unable to connect to db")
 
-async def insert_db(values):
-    query = "INSERT INTO countTable (ponto, ab, ba) values(%s, %s, %s)"
-    await query_db(query, values, True)
 
-async def check_cams():
-    query = "SELECT state, ponto, ip, p1, p2  FROM countTable WHERE state in (1, 2, 3)"
-    cam_lst = await query_db(query, [])
-    
-    for cam in cam_lst:
-        state, ponto, ip, p1, p2 = cam
-        if state == 1:
-    # eval(str) -> tupla //f'{ip}/media/video1'
-            
-            channels[ponto] = VideoChannel(ip, 'Wnidobrasil#22', p1, p2)
-            query = "UPDATE countTable SET state = 0 WHERE ponto = %s"
-            await query_db(query, [ponto], True)
-        elif state == 2:
-        
-            channels.pop(ponto, None)
-
-            query = "UPDATE countTable SET state = 4 WHERE ponto = %s"
-            await query_db(query, [ponto], True)
-
-        elif state == 3:
-            channels.pop(ponto, None)
-            print(channels)            
-    return None
-
-async def start_cams(channels):
-    query = "SELECT state, ponto, ip, p1, p2  FROM countTable WHERE state = 0"
-    cam_lst = await query_db(query, [])
-    for cam in cam_lst:
-        state, ponto, ip, p1, p2 = cam
-        channels[ponto] = VideoChannel(f'{ip}/media/video1', 'Wnidobrasil#22', p1, p2)
-
-
-
-#asyncio.run(check_cams())
-
-async def update_db(ch, chName):
-    queries = [
-        "SELECT reset, ab, ba FROM countTable WHERE ponto = %s",
-        "UPDATE countTable SET ab = %s, ba = %s WHERE ponto = %s",
-        "UPDATE countTable SET ab = 0, ba = 0, reset = 0 WHERE ponto = %s"
-        ]
-    conn = await connectToDB()
-    if conn:
-        async with conn.cursor() as cur:
-            try:
-                await cur.execute(queries[0], chName)
-                tup = await cur.fetchall()
-                reset, ab, ba = tup[0]
-                print(f"reset = {reset}, ab = {ab}, ba = {ba}")
-                
-                if reset:
-                    ch.countAB = 0
-                    ch.countBA = 0
-                    await cur.execute(queries[2], (chName,))
-                    await conn.commit()
-
-                
-                else:
-                    if (ab > ch.countAB or ba > ch.countBA):
-                        ch.countAB = ab
-                        ch.countBA = ba
-                    else:
-                        await cur.execute(queries[1], (ch.countAB, ch.countBA, chName))
-                        await conn.commit()
-                
-                
-            except aiomysql.MySQLError as err:
-                print("Erro na query: ", err)
-            finally:
-
-                conn.close()
-                print("conexion closed")
+#ok
+async def get_ready_streams(firstTime=True):
+    if firstTime:
+        query = "SELECT ponto, p1, p2, ab, ba, ip FROM countTable WHERE state IN (0,1)"
     else:
-        print("unable to connect to db")
+        query = "SELECT ponto, p1, p2, ab, ba, ip FROM countTable WHERE state = 1"
+    res_db = await query_db(query, None)
+    ch_lst = []
+    for item in res_db:
+        ch_lst.append(item)
+        print(ch_lst)
+    pontos = [item[0] for item in ch_lst]
+    if len(pontos) > 0:
+        query = "UPDATE countTable SET state = 0 WHERE ponto IN (%s)"
+        await query_db(query, pontos, commit=True)
+    return ch_lst
 
-    return None
+#asyncio.run(get_ready_streams())
+async def change_channel_state(ponto, state):
+    query = "UPDATE countTable SET state = %s WHERE ponto = %s"
+    await query_db(query, (state, ponto), commit=True)
+    print(f'estado do ponto {ponto} alterado para {state}')
 
-#asyncio.run(update_db2('ch1'))
+async def update_channel_db(ponto, ab, ba):
+    query = "UPDATE countTable SET ab = %s, ba = %s WHERE ponto = %s"
+    await query_db(query, (ab, ba, ponto), True)
+    print("adicionado: ", ponto, ab, ba)
 
 
-#asyncio.run(insert_db(('ch2', 0, 0)))
 
 
 
