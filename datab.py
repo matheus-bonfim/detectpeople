@@ -45,9 +45,9 @@ async def query_db(query, values, commit=False):
 #ok
 async def get_ready_streams(firstTime=True):
     if firstTime:
-        query = "SELECT ponto, p1, p2, ab, ba, ip FROM countTable WHERE state IN (0,1)"
+        query = "SELECT ponto, p1, p2, ab, ba, ip, direction, TIPO FROM countTable WHERE state IN (0,1)"
     else:
-        query = "SELECT ponto, p1, p2, ab, ba, ip FROM countTable WHERE state = 1"
+        query = "SELECT ponto, p1, p2, ab, ba, ip, direction, TIPO FROM countTable WHERE state = 1"
     res_db = await query_db(query, None)
     ch_lst = []
     for item in res_db:
@@ -55,8 +55,10 @@ async def get_ready_streams(firstTime=True):
         print(ch_lst)
     pontos = [item[0] for item in ch_lst]
     if len(pontos) > 0:
-        query = "UPDATE countTable SET state = 0 WHERE ponto IN (%s)"
-        await query_db(query, pontos, commit=True)
+        placeholders = ', '.join(['%s'] * len(pontos))
+        query = f"UPDATE countTable SET state = 0 WHERE ponto IN ({placeholders})"
+        await query_db(query, tuple(pontos), commit=True)
+
     return ch_lst
 
 #asyncio.run(get_ready_streams())
@@ -69,6 +71,14 @@ async def update_channel_db(ponto, ab, ba):
     query = "UPDATE countTable SET ab = %s, ba = %s WHERE ponto = %s"
     await query_db(query, (ab, ba, ponto), True)
     print("adicionado: ", ponto, ab, ba)
+
+async def set_channel_as_new(ponto, zerar=False):
+    if zerar:
+        query = "UPDATE countTable SET ab = 0, ba = 0, state = 1 WHERE ponto = %s"
+    else:
+        query = "UPDATE countTable SET state = 1 WHERE ponto = %s"
+    
+    await query_db(query, ponto, commit=True)
 
 
 

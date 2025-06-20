@@ -1,5 +1,5 @@
-from datab import change_channel_state
-
+from datab import change_channel_state, set_channel_as_new
+from config import new_processes
 
 async def kill_all_processes(stop_events, processes):
     for key in list(processes.keys()):
@@ -12,4 +12,9 @@ async def kill_process(ponto, stop_events, processes):
         await change_channel_state(ponto, 3)
         return True
     return False
+
+async def restart_process(ponto, stop_events, processes, zerar):
+    await kill_process(ponto, stop_events, processes)
+    await set_channel_as_new(ponto, zerar)
+    new_processes.put(1)
 

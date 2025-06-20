@@ -2,8 +2,9 @@ from flask import Flask, request, jsonify
 from config import processes, stop_events, state, new_processes
 from videoChannel import killVideoChannel, killAllVideoChannels
 import asyncio
-from processfunc import kill_process, kill_all_processes
-
+from processfunc import kill_process, kill_all_processes, restart_process
+from datab import set_channel_as_new
+import threading
 
 app = Flask(__name__)
 
@@ -37,9 +38,24 @@ def start_machine(): #somente avisa que tem nova cam na area
     new_processes.put(1)
     return f'Machine starting'
 
-
-
-
+@app.route('/restartMachine', methods=["GET"])
+def restart_machine():
+    ponto = request.args.get("ponto", type=str)
+    zerar = request.args.get("zerar", type=str)
+    if zerar == 'true':
+        zerar = True
+    else:
+        zerar = False
+    
+    def async_run():
+        asyncio.run(restart_process(ponto, stop_events, processes, zerar))
+    t = threading.Thread(target=async_run)
+    t.start()
+    
+    if zerar:
+        return f'Machine and counter restarted'
+    else:
+        return 'Machine restarted'
 
 
 #if __name__ == "__main__":

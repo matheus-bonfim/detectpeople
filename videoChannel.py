@@ -20,7 +20,10 @@ def killVideoChannel(ponto, channels):
 
 class VideoChannel:
     #video = {name:name, URL: url}
-    def __init__(self, ponto, ip, psw, p_line1, p_line2, countAB, countBA, direction=True, roi=None, offset=20): # roi = (y1,y2,x1,x2)
+    def __init__(self, ponto, ip, psw, p_line1, p_line2, countAB, countBA, tipo, direction=1, roi=None, offset=20): # roi = (y1,y2,x1,x2)
+    
+        WEB_FRAME_HEIGHT = 450
+        WEB_FRAME_WIDTH = 800
         self.ponto = ponto
         self.url = f'{ip}/media/video1'
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -30,13 +33,30 @@ class VideoChannel:
         psw = urllib.parse.quote(psw)
         self.p_line1 = ast.literal_eval(p_line1)
         self.p_line2 = ast.literal_eval(p_line2)
-        print(self.p_line1)
-        print(self.p_line2)
-        self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{self.url}', cv2.CAP_FFMPEG)
-        width = self.videoStream.get(cv2.CAP_PROP_FRAME_WIDTH)
-        height = self.videoStream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        if tipo == 'DVR':
+            stream_number = ponto.split('_')[1]
+            self.videoStream = cv2.VideoCapture(f'rtsp://mat:wnidobrasil22@{ip}:554/Streaming/Channels/{stream_number}', cv2.CAP_FFMPEG)
+        else:   
+            self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{self.url}', cv2.CAP_FFMPEG)
         #1920/1080p
-        self.al, self.bl = line_func(self.p_line1[0], self.p_line1[1], self.p_line2[0], self.p_line2[1])
+
+        frame_width = self.videoStream.get(cv2.CAP_PROP_FRAME_WIDTH)
+        frame_height = self.videoStream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+
+        if(frame_width > WEB_FRAME_WIDTH):
+            alfa = abs(frame_width/WEB_FRAME_WIDTH) 
+            self.p_line1_n = [alfa * self.p_line1[0], alfa * self.p_line1[1]]
+            self.p_line2_n = [alfa * self.p_line2[0], alfa * self.p_line2[1]]
+        
+        else:
+            alfa = 1 / (abs(WEB_FRAME_WIDTH/frame_width))
+            self.p_line1_n = [int(alfa * self.p_line1[0]), int(alfa * self.p_line1[1])]
+            self.p_line2_n = [int(alfa * self.p_line2[0]), int(alfa * self.p_line2[1])]
+        
+        n_frame = [alfa * WEB_FRAME_WIDTH, alfa * WEB_FRAME_HEIGHT]
+        offset_x, offset_y = int(n_frame[0] - frame_width), int(n_frame[1] - frame_height)
+        offset_x, offset_Y = 0, 0
+        self.al, self.bl = line_func(self.p_line1_n[0] - offset_x, self.p_line1_n[1] - offset_y, self.p_line2_n[0] - offset_x, self.p_line2_n[1] - offset_y)
 
         self.roi = roi
         if self.roi:
@@ -73,7 +93,8 @@ class VideoChannel:
                         cy += self.ry1
                     
                     d = dist_line_signed(cx, cy, self.al, self.bl)
-                    print("a distancia é: ",d)
+                    print("distancia: ",d)
+                    
                     if(d < -self.offset): #ta do lado B
                         if int(track_id) not in self.sideB_ids:
                             # tenta remover do lado A

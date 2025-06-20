@@ -1,6 +1,7 @@
 from multiprocessing import Process, Event
 from videoChannel import VideoChannel
 import time
+from config import processes, stop_events, state, new_processes
 
 
 #channels[ponto] = VideoChannel(ponto, f'{ip}/media/video1', 'Wnidobrasil#22', p1, p2, countAB, countBA)
@@ -8,12 +9,14 @@ import time
 #[('ch1', '[66,275]', '[726,256]', None, None)]
 
 
+
+
 def create_channel_process(channel_info, psw, stop, data_queue):
     run = True
     send_delay = 0.5
     last_time = time.time()
-    ponto, p1, p2, ab, ba, ip = channel_info
-    channel = VideoChannel(ponto, ip, psw, p1, p2, ab, ba)
+    ponto, p1, p2, ab, ba, ip, direction, tipo = channel_info
+    channel = VideoChannel(ponto, ip, psw, p1, p2, ab, ba, tipo, direction=direction)
     last_ab = ab
     last_ba = ba
 
@@ -30,8 +33,7 @@ def create_channel_process(channel_info, psw, stop, data_queue):
                 last_ab = channel.countAB
                 last_ba = channel.countBA
                 last_time = time.time()
-                print("sending data")
                 data = { "ponto": ponto, "ab": last_ab, "ba": last_ba }
                 data_queue.put(data)
-            else:
-                print("nao mudou")
+            
+                
