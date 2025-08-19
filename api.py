@@ -30,7 +30,7 @@ def stop_machine():
     ponto = request.args.get("ponto", type=str)
     ret = asyncio.run(kill_process(ponto, stop_events, processes))
     if ret:
-        return f'Machine {ponto} stopped to work'
+        return f'Machine {ponto} stopped working'
     return f'Machine {ponto} is already disabled'
 
 @app.route('/startMachine', methods=["GET"])

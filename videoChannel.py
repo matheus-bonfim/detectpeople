@@ -4,6 +4,7 @@ import urllib.parse
 from ultralytics import YOLO
 import torch
 import ast
+import time
 
 
 
@@ -21,11 +22,12 @@ def killVideoChannel(ponto, channels):
 class VideoChannel:
     #video = {name:name, URL: url}
     def __init__(self, ponto, ip, psw, p_line1, p_line2, countAB, countBA, tipo, direction=1, roi=None, offset=20): # roi = (y1,y2,x1,x2)
-    
+        self.r_tracker_int = 5 * 60
+        self.l_time = time.time()
         WEB_FRAME_HEIGHT = 450
         WEB_FRAME_WIDTH = 800
         self.ponto = ponto
-        self.url = f'{ip}/media/video1'
+        self.url = f'{ip}/media/video3'
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = YOLO("yolov8n.pt")  # ou yolov8n.pt, yolov8m.pt...
         self.model.to(device)  # Garante que está na GPU
@@ -78,8 +80,11 @@ class VideoChannel:
                 frameROI = self.frame[self.ry1:self.ry2, self.rx1:self.rx2]
             else:
                 frameROI = self.frame      
+            if(time.time() - self.l_time > self.r_tracker_int):
+                self.l_time = time.time()
+                self.model.tracker = None
             self.results = self.model.track(frameROI, persist=True, classes=[0])  # habilita rastreamento por ID
-
+            
             if self.results[0].boxes.id is not None:
                 for box, cls, track_id in zip(self.results[0].boxes.xyxy,
                                               self.results[0].boxes.cls,
@@ -93,7 +98,7 @@ class VideoChannel:
                         cy += self.ry1
                     
                     d = dist_line_signed(cx, cy, self.al, self.bl)
-                    print("distancia: ",d)
+                    
                     
                     if(d < -self.offset): #ta do lado B
                         if int(track_id) not in self.sideB_ids:

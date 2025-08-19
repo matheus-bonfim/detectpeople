@@ -11,14 +11,21 @@ from datab import get_ready_streams, update_channel_db
 from process import create_channel_process
 from config import processes, stop_events, state, new_processes
 from api import app
+from clientApi import notify
 
 psw = 'Wnidobrasil#22'
 
+
+
 async def update_data(data_queue):
+  
     while True:
         try:
             data = data_queue.get_nowait()
-            await update_channel_db(data["ponto"], data["ab"], data["ba"])
+         
+            await update_channel_db(data["ponto"], data["ab"], data["ba"], data["notify"])
+            if data["notify"]:
+                await notify(data)
 
         except Empty: #se nao tem nada na fila da exception
             break
