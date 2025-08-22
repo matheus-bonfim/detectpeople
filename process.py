@@ -24,10 +24,10 @@ def create_channel_process(channel_info, psw, stop, data_queue):
     
     send_delay = 0.5
     last_time = time.time()
-    ponto, p1, p2, ab, ba, ip, direction, tipo, fromTime, toTime = channel_info
+    ponto, p1, p2, ab, ba, rtsp_url, direction, tipo, fromTime, toTime = channel_info
     print(f'FromTime: {fromTime} toTime: {toTime}')
     
-    channel = VideoChannel(ponto, ip, psw, p1, p2, ab, ba, tipo, direction=direction)
+    channel = VideoChannel(ponto, rtsp_url, psw, p1, p2, ab, ba, tipo, direction=direction)
     last_ab = ab
     last_ba = ba
 

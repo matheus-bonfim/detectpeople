@@ -27,7 +27,7 @@ async def update_data(data_queue):
             if data["notify"]:
                 await notify(data)
 
-        except Empty: #se nao tem nada na fila da exception
+        except Empty: #se nao tem nada na fila gera exception
             break
 
 async def check_and_create_process(new_processes, processes, stop_events, data_queue):
@@ -59,12 +59,12 @@ async def main():
     #def create_process():
 
 
-    for ch_info in ch_list:
-        stop = Event()
-        p = Process(target=create_channel_process, args=(ch_info, psw, stop, data_queue))
-        processes[ch_info[0]] = p
-        stop_events[ch_info[0]] = stop
-        p.start()
+    # for ch_info in ch_list:
+    #     stop = Event()
+    #     p = Process(target=create_channel_process, args=(ch_info, psw, stop, data_queue))
+    #     processes[ch_info[0]] = p
+    #     stop_events[ch_info[0]] = stop
+    #     p.start()
 
     #time.sleep(10)
     
@@ -73,7 +73,6 @@ async def main():
     last_time_end = time.time()
 
     while state['run']:
-
 
         if( time.time() - last_time > 1):
             last_time = time.time() # bom criar threads para update_data

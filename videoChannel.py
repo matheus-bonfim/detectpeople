@@ -21,13 +21,13 @@ def killVideoChannel(ponto, channels):
 
 class VideoChannel:
     #video = {name:name, URL: url}
-    def __init__(self, ponto, ip, psw, p_line1, p_line2, countAB, countBA, tipo, direction=1, roi=None, offset=20): # roi = (y1,y2,x1,x2)
+    def __init__(self, ponto, rtsp_url, psw, p_line1, p_line2, countAB, countBA, tipo, direction=1, roi=None, offset=20): # roi = (y1,y2,x1,x2)
         self.r_tracker_int = 5 * 60
         self.l_time = time.time()
         WEB_FRAME_HEIGHT = 450
         WEB_FRAME_WIDTH = 800
         self.ponto = ponto
-        self.url = f'{ip}/media/video3'
+        #self.url = f'{ip}/media/video3'
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model = YOLO("yolov8n.pt")  # ou yolov8n.pt, yolov8m.pt...
         self.model.to(device)  # Garante que está na GPU
@@ -35,11 +35,8 @@ class VideoChannel:
         psw = urllib.parse.quote(psw)
         self.p_line1 = ast.literal_eval(p_line1)
         self.p_line2 = ast.literal_eval(p_line2)
-        if tipo == 'DVR':
-            stream_number = ponto.split('_')[1]
-            self.videoStream = cv2.VideoCapture(f'rtsp://mat:wnidobrasil22@{ip}:554/Streaming/Channels/{stream_number}', cv2.CAP_FFMPEG)
-        else:   
-            self.videoStream = cv2.VideoCapture(f'rtsp://admin:{psw}@{self.url}', cv2.CAP_FFMPEG)
+   
+        self.videoStream = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
         #1920/1080p
 
         frame_width = self.videoStream.get(cv2.CAP_PROP_FRAME_WIDTH)

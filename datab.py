@@ -24,7 +24,7 @@ async def connectToDB():
     try:
         conn = await aiomysql.connect(
             host = '192.168.10.237',
-            user='root',
+            user='admin',
             password='17012023',
             db='monitoramentoLPR'
         )
@@ -60,9 +60,9 @@ async def query_db(query, values, commit=False):
 #ok
 async def get_ready_streams(firstTime=True):
     if firstTime:
-        query = "SELECT ponto, p1, p2, ab, ba, ip, direction, TIPO, fromTime, toTime FROM countTable WHERE state IN (0,1)"
+        query = "SELECT ponto, p1, p2, ab, ba, rtsp_url, direction, TIPO, fromTime, toTime FROM countTable WHERE state IN (0,1)"
     else:
-        query = "SELECT ponto, p1, p2, ab, ba, ip, direction, TIPO, fromTime, toTime FROM countTable WHERE state = 1"
+        query = "SELECT ponto, p1, p2, ab, ba, rtsp_url, direction, TIPO, fromTime, toTime FROM countTable WHERE state = 1"
     res_db = await query_db(query, None)
     ch_lst = []
     for item in res_db:
