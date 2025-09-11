@@ -46,7 +46,7 @@ async def check_and_create_process(new_processes, processes, stop_events, data_q
 
 async def main():
     def run_flask():
-        app.run(port=5500, debug=False, use_reloader=False)
+        app.run(port=5500, debug=False, use_reloader=False, host="192.168.10.226")
 
     thread_flask = threading.Thread(target=run_flask)
     thread_flask.start()
